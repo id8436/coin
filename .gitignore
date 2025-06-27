@@ -5,6 +5,7 @@ __pycache__/
 
 # 비밀키 등등
 j1_0_0_get_origin_data/secret.py
+j2_logics/
 
 # Virtual environment
 .venv/

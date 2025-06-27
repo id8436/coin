@@ -43,7 +43,7 @@ from j1_0_0_get_origin_data.base_data_machine import InfoMachine
 machine = InfoMachine(asset_type='crypto')
 pd.set_option('display.max_columns', None)
 for ticker in tickers_block['crypto']:
-    price_df = machine.get_price_df(interval='1m', code='BTC', payment_currency='KRW')
+    price_df = machine.get_price_df(interval='1m', code=ticker, payment_currency='KRW')
     print(price_df)
     table_name = f'crypto_{ticker}'
     df_inser_to_table(table_name, price_df)
