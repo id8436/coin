@@ -1,0 +1,61 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 비밀키 등등
+j1_0_0_get_origin_data/secret.py
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+.conda/
+
+# IDE settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# Secret files
+.env
+*.env
+secrets.json
+
+# MyPy, Pylint, Coverage, etc.
+.mypy_cache/
+.pytest_cache/
+coverage.xml
+htmlcov/
+
+# PyInstaller
+dist/
+build/
+*.spec
+
+# VSCode local history
+.history/
+
+# OneDrive & other cloud junk
+*.tmp
+*.bak
+~$*
+*.swp
