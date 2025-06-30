@@ -1,4 +1,5 @@
-import requests
+# import requests
+from trading_machine import replace_requests as requests
 import pandas as pd
 import time
 import FinanceDataReader as fdr
