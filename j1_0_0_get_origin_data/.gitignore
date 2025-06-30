@@ -1,7 +1,0 @@
-.idea
-.venv
-.vscode
-*.pyc
-__pycache__
-logs
-j1_0_0_get_origin_data/secret.py
