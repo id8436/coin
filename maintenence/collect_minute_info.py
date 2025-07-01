@@ -146,10 +146,10 @@ def df_upsert_to_table(table_name, df, con):
 
 
 import pandas as pd
+pd.set_option('display.max_columns', None)
 ##### 크립토 데이터 저장.
 from j1_0_0_get_origin_data.base_data_machine import InfoMachine
 machine = InfoMachine(asset_type='crypto')
-pd.set_option('display.max_columns', None)
 for ticker in tickers_block['crypto']:
     price_df = machine.get_price_df(interval='1m', code=ticker, payment_currency='KRW')
     print(price_df)
@@ -159,3 +159,18 @@ for ticker in tickers_block['crypto']:
     except Exception as e:
         print(e)
         pass
+
+
+'''나중에 주식 데이터도 분봉으로 가져오는 게 가능해지면 꺼내자.
+for asset_type, ticker_list in tickers_block.items():
+    machine = InfoMachine(asset_type=asset_type)
+    for ticker in ticker_list:
+        price_df = machine.get_price_df(interval='1m', code=ticker, payment_currency='KRW')
+        print(price_df)
+    try:
+        table_name = f'{asset_type}_{ticker}'
+        df_upsert_to_table(table_name, price_df, engine)
+    except Exception as e:
+        print(e)
+        pass
+'''

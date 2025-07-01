@@ -1,15 +1,17 @@
 import datetime
 import sys
 
-# import requests
-from trading_machine import replace_requests as requests
+
 from trading_machine.bithumb.xcoin_api_client import *
 import pybithumb
 import pandas as pd
 import math
 import time
 from j1_0_0_get_origin_data import secret
-
+if secret.mode == 'school':
+    from trading_machine import replace_requests as requests
+else:
+    import requests
 class Machine:
     '''Public은 그냥 get 요청하면 되지만, Private는 복잡한 과정을 거친다. 때문에 공식사이트에서 제공하는 XCoinAPI를 사용한다.
     단순히 API 활용을 위한 클래스.

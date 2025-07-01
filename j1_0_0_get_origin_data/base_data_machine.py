@@ -1,8 +1,11 @@
-# import requests
-from trading_machine import replace_requests as requests
+from j1_0_0_get_origin_data import secret
+if secret.mode == 'school':
+    from trading_machine import replace_requests as requests
+else:
+    import requests
 import pandas as pd
 import time
-import FinanceDataReader as fdr
+import FinanceDataReader as fdr  # 이 친구는 크립토만 아니면 종목코드로 시장 파악 가능.(모든 시장에서 종목코드는 안겹치는듯)
 from j1_0_0_get_origin_data import base_paremeter
 
 class InfoMachine:
@@ -47,7 +50,7 @@ class InfoMachine:
         data_from = kwargs.get('data_from', None)  # 언제 데이터부터 불러올지. 따로 api에서 제공하진 않는다. 그냥 통으로 줌.
         data_to = kwargs.get('data_to', None)
 
-        interval = kwargs.get('interval', '24h')  # 기본값은'24h'. 가능: '1m'(1분),
+        interval = kwargs.get('interval', '1m')  # 기본값은'24h'. 가능: '1m'(1분),
         code = kwargs.get('code', "BTC")
         payment_currency = kwargs.get('payment_currency', "KRW")
 
@@ -77,7 +80,7 @@ class InfoMachine:
     def stock(self, **kwargs):
         '''stock 일별 데이터를 불러온다.'''
         # 기초 파라메터
-        interval = kwargs.get('interval', '24h')  # 기본값은'24h'
+        interval = kwargs.get('interval', '24h')  # 기본값은'24h'(일봉만 가능)
         code = kwargs.get('code', "095570")
         payment_currency = kwargs.get('payment_currency', "KRW")
         data_from = kwargs.get('data_from', None)  # 언제 데이터부터 불러올지.
