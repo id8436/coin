@@ -4,15 +4,14 @@ __pycache__/
 *$py.class
 
 # 비밀키 등등
-j1_0_0_get_origin_data/secret.py
-j2_logics/
+j0_personal_setting/
+j2_strategy/
 
 # Virtual environment
-.venv/
-venv/
-ENV/
-env/
-.conda/
+# Secret files
+.env
+*.env
+secrets.json
 
 # IDE settings
 .vscode/
@@ -20,26 +19,10 @@ env/
 *.sublime-project
 *.sublime-workspace
 
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints/
-
-# macOS
-.DS_Store
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
 # Logs and databases
 *.log
 *.sqlite3
 *.db
-
-# Secret files
-.env
-*.env
-secrets.json
 
 # MyPy, Pylint, Coverage, etc.
 .mypy_cache/

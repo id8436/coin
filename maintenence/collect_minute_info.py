@@ -24,15 +24,14 @@ tickers_block = {
 }
 
 ##################################################
-import pymysql  # 이거 없으면 engine 생성에서 에러날듯?
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from j1_0_0_get_origin_data import secret
+from j0_personal_setting import secret
 from sqlalchemy import create_engine
 engine = create_engine("mysql+pymysql://{user}:{pw}@{domain}/{db}"
                        .format(user=secret.db_info['user'],  # sql 계정 입력.
-                               domain=secret.db_info['host'],       # 도메인 주소
+                               domain=secret.db_info['host'],  # 도메인 주소
                                pw=secret.db_info['password'],  # sql 비밀번호 입력.
                                db=secret.db_info['database']))  # 연결할 db이름 입력.
 from sqlalchemy import text
@@ -148,7 +147,7 @@ def df_upsert_to_table(table_name, df, con):
 import pandas as pd
 pd.set_option('display.max_columns', None)
 ##### 크립토 데이터 저장.
-from j1_0_0_get_origin_data.base_data_machine import InfoMachine
+from j1_data_pipeline.step01_get_origin_data.base_data_machine import InfoMachine
 machine = InfoMachine(asset_type='crypto')
 for ticker in tickers_block['crypto']:
     price_df = machine.get_price_df(interval='1m', code=ticker, payment_currency='KRW')

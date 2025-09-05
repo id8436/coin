@@ -2,7 +2,7 @@ from strategy_base import check
 from maintenence.get_price_info import Get_price_info
 from maintenence import sqlite
 import datetime
-from trading_machine.bithumb.machine import Machine as CriptoMachine
+from j1_data_pipeline.trading_machine.bithumb.machine import Machine as CriptoMachine
 
 target_tickers = ['BTC', 'SOL', 'XRP', 'ETH', 'DOGE', '1INCH', 'WAXP']  # 관심 티커 리스트.
 def coin_trade():

@@ -1,22 +1,35 @@
-# 다음 모듈은 core_http_method에서 불러와진다.
-from j1_data_pipeline.trading_machine.bithumb.machine import *
+import datetime
 
+from j1_data_pipeline.step00_trading_engine.bithumb.xcoin_api_client import *
+from . import base_info
+import pybithumb
+import pandas as pd
+import math
+import time
+from j0_personal_setting import secret
+
+if secret.mode == 'school':
+    from j1_data_pipeline.step00_trading_engine import replace_requests as requests
+else:
+    import requests
 class Machine:
     '''Public은 그냥 get 요청하면 되지만, Private는 복잡한 과정을 거친다. 때문에 공식사이트에서 제공하는 XCoinAPI를 사용한다.
     단순히 API 활용을 위한 클래스.
     가능하면 공식문서에 나오는 요청주소와 함수이름을 동일하게 하자. 유지보수를 위해.'''
-    def __init__(self, api_key="0fd4afa676d607e30a9d1e8e36504cd4", api_secret="a0c2799d8455873a328e5ee8508a2e6c"):
+    def __init__(self, api_key=secret.bithumb_api_key, api_secret=secret.bithumb_api_secret):
         '''처음에 정의하는 값들'''
         self.api_key = api_key
         self.api_secret = api_secret
-        self.http = BithumbHttp(api_key, api_secret);
+        self.api = XCoinAPI(self.api_key, self.api_secret);
         #--------Public API를 사용하기 위한 변수.
         self.base_address = 'https://api.bithumb.com/public/'
+        self.MAX_RETRY = 3  # 최대 재시도 횟수
+        self.RETRY_DELAY = 1  # 재시도 간격 (초)
     def do(self, target_address, Params):
         '''API 주소와 파라미터를 받아 실행하는 기본 함수.'''
-        result = self.http.post(target_address, **Params);
+        rgParams = Params
+        result = self.api.xcoinApiCall(target_address, rgParams);
         return result
-
     def public_response(self, url=""):
         '''공적 api 응답을 받을 때. '''
         url = url
@@ -44,17 +57,19 @@ class Machine:
         '''사용자의 수수료 등 기본적인 정보.(테스트용으로 많이 사용)'''
         target_address = "/info/account"
         Params = {"order_currency": 'BTC',
-                  "payment_currency": "KRW",  # payment_curency
-                  }
+                  "payment_currency": "KRW"  # payment_curency
+                  };
         return self.do(target_address,Params)
 
     def balance(self):
         '''현재자산 및 걸려있는 코인갯수 파악. ALL로 불러오고 이후의 처리를 하는 편이 쉽다.'''
-        target_address = "/info/balance"
-        Params = {"currency": 'ALL',  # 각 코인에 대해서도 알아볼 수 있다.
-                  };
-        return self.do(target_address,Params)
-
+        # 직접 구현해보고 싶었지만... ㅜㅜ
+        # target_address = "/info/balance"
+        # Params = {"currency": 'ALL',  # 각 코인에 대해서도 알아볼 수 있다.
+        #           };
+        # return self.do(target_address,Params)
+        bi = pybithumb.Bithumb(self.api_key, self.api_secret)
+        return bi.get_balance('ALL')
     def total_value(self):
         '''모든 가치를 KRW로 환산하여 총 합을 알려준다.'''
 
@@ -101,13 +116,31 @@ class Machine:
     def market_buy(self,currency, unit, payment_currency="KRW"):  # 살 수 있는 조건을 맞추기 위해 조작을 거침.
         '''시장가로 사기'''
         current, unit = self.set_unit(num_coin=unit, coin=currency)  # 코인종류와 주문수량을 받아 주문 unit 갯수를 가능한 주문값으로 맞춘다.
-        print('시장가구매.' + str(currency)+ '을 '+ str(unit) + '만큼 삼.')  # 에러 파악용. 어떤 코인에 얼마만큼 주문이 들어갔는지.
         target_address = "/trade/market_buy"
         Params = {"order_currency": currency,   # 어떤 코인을?
                   "units": unit, # 매수 수량
                   "payment_currency":payment_currency,  # 결제통화
                   };
-        return self.do(target_address,Params)
+        print('시장가구매.' + str(currency)+ '을 '+ str(unit) + '만큼 삼.')  # 에러 파악용. 어떤 코인에 얼마만큼 주문이 들어갔는지.
+        # 임시방편
+        bi = pybithumb.Bithumb(self.api_key, self.api_secret)
+
+        MAX_RETRY = self.MAX_RETRY  # 최대 재시도 횟수
+        RETRY_DELAY = self.RETRY_DELAY  # 재시도 간격 (초)
+        for attempt in range(1, MAX_RETRY + 1):
+            try:
+                a = bi.buy_market_order(currency, unit)
+                if type(a) is tuple:  # 문제 없으면 튜플로 나옴.
+                    break  # 재시도 없이, 여기에서 끝낸다.
+                # 특정 에러코드일 때만 재시도
+                if a.get("status") in ("5600", "5601", "5200"):
+                    print(f'error 뜸 {a}')
+                    time.sleep(RETRY_DELAY)
+                    continue
+            except Exception as e:  # 이외 에러의 경우.
+                print(f"[{attempt}] 예외 발생: {e}")
+                time.sleep(RETRY_DELAY)
+        return a
     def market_sell(self, currency, unit, payment_currency="KRW"):
         '''시장가로 팔기'''
         current, unit = self.set_unit(num_coin=unit, coin=currency)  # 코인종류와 주문수량을 받아 주문 unit 갯수를 가능한 주문값으로 맞춘다.
@@ -116,7 +149,11 @@ class Machine:
                   "units": unit, # 수량
                   "payment_currency":payment_currency,  # 결제통화
                   }
-        return self.do(target_address,Params)
+        # 임시방편
+        bi = pybithumb.Bithumb(self.api_key, self.api_secret)
+        a = bi.sell_market_order(currency, unit)
+        return a
+        #return self.do(target_address,Params)
 
     def limits_buy(self,currency, unit, price ,payment_currency="KRW", type="bid"):  # 지정가 거래는 type로 매수,매도 구분.
         '''지정가로 사기'''
@@ -132,88 +169,66 @@ class Machine:
         print(Params)
         return self.do(target_address, Params)
     def limits_sell(self,currency, unit, price ,payment_currency="KRW"):  # 지정가 거래는 type로 매수,매도 구분.
+        '''지정가 매도'''
         # ----임시방편
         price, unit = self.set_unit(num_coin=unit, coin=currency, current=price)  # 코인종류와 주문수량을 받아 주문 unit 갯수를 가능한 주문값으로 맞춘다.
 
-        import pybithumb
-        con_key = '0fd4afa676d607e30a9d1e8e36504cd4'  # Connect Key
-        sec_key = 'a0c2799d8455873a328e5ee8508a2e6c'  # Secret Key
-        bi = pybithumb.Bithumb(con_key,sec_key)
-        a = bi.sell_limit_order(currency, price, unit)
-        print(currency + '를' + str(price) + '에' + str(unit)+'개 팜.' + str(datetime.datetime.today()))
+        bi = pybithumb.Bithumb(self.api_key,self.api_secret)
+        # 에러 발생할 때 재시도 하게끔.
+        MAX_RETRY = self.MAX_RETRY  # 최대 재시도 횟수
+        RETRY_DELAY = self.RETRY_DELAY  # 재시도 간격 (초)
+        for attempt in range(1, MAX_RETRY + 1):
+            try:
+                a = bi.sell_limit_order(currency, price, unit)
+                if type(a) is tuple:  # 문제 없으면 튜플로 나옴.
+                    break  # 재시도 없이, 여기에서 끝낸다.
+                # 특정 에러코드일 때만 재시도
+                if a.get("status") in ("5600", "5601", "5200"):
+                    print(f'error 뜸 {a}')
+                    time.sleep(RETRY_DELAY)
+                    continue
+            except Exception as e:  # 이외 에러의 경우.
+                print(f"[{attempt}] 예외 발생: {e}")
+                time.sleep(RETRY_DELAY)
+
+        print(currency + '를' + str(price) + '에' + str(unit)+'개 리미트 셀.' + str(datetime.datetime.today()))
         return a
         # '''지정가로 팔기'''
         # return self.limits_buy(currency, unit, price ,payment_currency=payment_currency, type="ask")
 
     def set_unit(self, num_coin=0, coin=0, current=0):
-        '''최소 호가단위와 최소 구매단위에 맞추기. 너무 작은 값은 버리는 과정.'''
+        '''최소 호가단위와 최소 구매단위에 맞추기. 너무 작은 값은 버리는 과정.
+        '''
         ##최소 호가단위와 구매단위는 거래정책을 참조.
         price_unit =0  # 최소주문수량을 담기 위한 변수.
         if current == 0:  # current 입력값이 없다면(시장가 구매라면)
             current = self.get_current_info(coin)['closing_price']  # 현재가격을 받아 가격에 넣는다.
-
-        #-----호가단위 찾기----------- 가격에 따라 구매가격의 최소단위가 정해져 있다.
-        # 참 돌아버리는 게; 1원 이상부터는 데이터형이 float이 되면 주문이 안된다...
         current = float(current)  # 받은 값의 타입을 바꾼다.
-        if current < 1:
-            price_unit = 4
-        elif current < 10:
-            price_unit = 3
-        elif current < 100:
-            price_unit = 2
-        elif current < 1000:
-            price_unit = 1
-        elif current < 5000:
-            price_unit = 0
-        elif current < 10000:
-            price_unit = -2
-        elif current < 50000:
-            price_unit = -2
-        elif current < 100000:
-            price_unit = -3
-        elif current < 500000:
-            price_unit = -3
-        elif current < 1000000:
-            price_unit = -4
-        else:
-            price_unit = -4
+        # --- 1) 호가단위 결정 (빗썸 표 그대로 반영)
+        for limit, unit in base_info.price_table:
+            if current < limit:
+                price_unit = unit
+                break
+        # --- 2) 현재가를 호가단위에 맞게 반올림
+        current = round(math.floor(current / price_unit) * price_unit, 6)  # 부동소수점 오차방지를 위해 round로 감싼다.
 
-        current = round(current, price_unit)
-        if current > 1000:
-            current = int(current)
 
-        # 입력가격을 주문이 가능한 형태로 바꾼다.
-        # #최소 호가단위 맞추기.
         # current = current / price_unit  # 최소단위로 나누어 소수점 잘라준 이후 다시 최소단위를 곱하여 올바른 요청값을 만든다.
           # 소수점을 잘라줘 거래가 가능한 양으로 맞춘다.
         # current = current * price_unit
         # 부동소수점의 오차 때문에.... 이상한 게 남는다.
 
-        #### 최소 주문단위 찾기----------- 마찬가지로, 금액에 따라 최소구매코인갯수가 있다.
-        if current < 100:
-            coin_unit = -1  # 1의자리에서 반올림.
-        elif current < 1000:
-            coin_unit = 0
-        elif current < 10000:
-            coin_unit = 1
-        elif current < 100000:
-            coin_unit = 2
-        elif current < 1000000:
-            coin_unit = 3
-        else:
-            coin_unit = 4
+        # 반복문으로 coin_unit 결정
+        for limit, unit in base_info.coin_table:
+            if current < limit:
+                coin_unit = unit
+                break
         # 최소 주문갯수 맞추기.
         num_coin = float(num_coin)  # 들어온 값을 숫자화
         num_coin = num_coin * (10** coin_unit)  # 내림을 적용하기 위함.
         num_coin = math.floor(num_coin)  # 내림 적용.
         num_coin = num_coin * (10** -coin_unit)  # 되돌리기.
-        num_coin = round(num_coin, coin_unit)  # 소수점을 잘라줘 거래가 가능한 양으로 맞춘다.
-        if current > 100:
-            current = int(current)
-        # print('소수점 자르기' + str(num_coin))
-        # num_coin = num_coin * coin_unit
-        # print('원상복구' + str(num_coin))
-        # ---- 아..... 0.1 등을 곱하면... 0.000000000004 따위의 오차가 생긴다.(왜그러는걸까;) 때문에 round함수로 깔끔하게 처리하자.
+        num_coin = round(num_coin, coin_unit) # round(num_coin, coin_unit)  # 소수점을 잘라줘 거래가 가능한 양으로 맞춘다.
         return current, num_coin
 
     def cancle_order(self, order_id, order_currency, type='bid', payment_currency="KRW"):
@@ -284,5 +299,43 @@ class Machine:
 
 if __name__ == '__main__':  # 테스트용.
     machine = Machine()
-    a = machine.get_ticker_list()
+
+    # 티커 리스트 출력
+    tickers = machine.get_ticker_list()
+    print("Available Tickers:", tickers)
+
+    # set_unit 검증
+    test_cases = [
+        ("BTC", 0.12345678),
+        ("ETH", 1.987654321),
+        ("XRP", 123.456),
+        ("DOGE", 10000.123456),
+        ("SOL", 0.00000123)
+    ]
+    for coin, num in test_cases:
+        print(f"\n[테스트] set_unit(coin={coin}, num_coin={num})")
+        try:
+            price, corrected_unit = machine.set_unit(num_coin=num, coin=coin)
+            print(f"  ▶ 정리된 가격: {price}, 정리된 수량: {corrected_unit}")
+        except Exception as e:
+            print(f"  ▶ 오류 발생: {e}")
+
+    # 현재가 가져오기.
+    price = machine.get_current_price(currency="DOGE")
+    print(price)
+    # 금액에 맞춘 수량 찾기.
+    asset = 10000
+    coin_num = asset / float(price)
+    print(coin_num)
+    # 수량 맞추기.
+    price, corrected_unit = machine.set_unit(num_coin=coin_num, coin="DOGE")
+    print(f"  ▶ 정리된 가격: {price}, 정리된 수량: {corrected_unit}")
+
+    # 지정가 팔기 점검. (시장가로 사고 지정가로 팔기.)
+    a= machine.market_buy(currency="DOGE", unit=corrected_unit, payment_currency="KRW")
+    print(a)
+    target_price = price * 1.02
+    target_price, _ = machine.set_unit(current=target_price, coin="DOGE")
+    print(target_price)
+    a = machine.limits_sell(currency='DOGE', unit=corrected_unit, price=target_price ,payment_currency="KRW")
     print(a)
