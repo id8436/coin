@@ -1,0 +1,68 @@
+한국투자증권(KIS) 트레이딩 엔진 (Minimal Skeleton)
+
+이 디렉터리는 한국투자증권 오픈API를 호출하기 위한 최소 골격을 제공합니다.
+
+구성
+- machine.py: 토큰 발급/갱신, 공통 요청 헬퍼, 샘플 현재가 조회(inquire_price)
+- replace_requests.py: 학교 등 SSL 이슈 환경을 위한 프록시 기반 requests 대체 래퍼
+- j0_personal_setting/secret.py: 앱키/시크릿 등 민감정보 보관 장소 (이미 존재)
+
+사전 준비
+1) 한국투자증권 오픈API에서 AppKey/AppSecret 발급
+2) secret.py에 다음 값이 존재해야 합니다.
+   KIS_API_Key = "..."
+   KIS_API_Secret = "..."
+
+빠른 시작 (모의투자 서버)
+
+from j1_data_pipeline.step00_trading_engine.KIS.machine import Machine
+
+# 모의투자 서버 연결 (paper=True). 실서버는 paper=False
+kis = Machine(paper=True)
+
+# 샘플: 국내주식 현재가 조회 (005930: 삼성전자)
+res = kis.inquire_price("005930")
+print(res.status_code)
+print(res.json())
+
+# 공통 요청 헬퍼 사용 예시 (직접 엔드포인트 호출)
+# path는 '/uapi/...' 형태, headers에 tr_id가 필요할 수 있음
+res = kis.request(
+    method="GET",
+    path="/uapi/domestic-stock/v1/quotations/inquire-price",
+    headers={"tr_id": "FHKST01010100"},
+    params={"fid_cond_mrkt_div_code": "J", "fid_input_iscd": "005930"},
+)
+print(res.json())
+
+설명
+- Machine은 OAuth2 Client Credentials로 토큰을 자동 발급/캐시합니다.
+- needs_auth=True(기본값)인 요청은 Authorization: Bearer ... 헤더를 자동 첨부합니다.
+- 서버 주소:
+  - 모의: https://openapivts.koreainvestment.com:29443
+  - 실서버: https://openapi.koreainvestment.com:9443
+- 실제 매매/조회에는 API별 적절한 tr_id, 헤더, 파라미터, 계좌정보가 필요합니다.
+
+주의
+- 네트워크 보안 환경(학교 등)에서는 replace_requests 래퍼를 통해 프록시 서버로 우회 호출합니다.
+- 주문 기능은 안전을 위해 본 스켈레톤에는 포함하지 않았습니다. 실제 주문 전 반드시 문서를 정독하고 테스트 계정에서 검증하세요.
+
+
+추가: 편의용 Client 사용법
+
+from j1_data_pipeline.step00_trading_engine.KIS.client import Client
+
+# 안전 기본값: paper=True(모의), dry_run=True(주문 전송 안 함)
+cli = Client(paper=True, dry_run=True)
+
+# 현재가(float) 조회
+print(cli.price("005930"))
+
+# 현금 매수 주문 payload 미리보기 (dry_run=True이므로 전송 안 함)
+print(cli.order_cash_buy(code="005930", qty=10))
+
+# 실제 전송하려면 dry_run=False로 생성하거나 변경
+cli_real = Client(paper=True, dry_run=False)
+# 주의: secret.py에 KIS_CANO, KIS_ACNT_PRDT_CD 설정 필요 (또는 생성자에 전달)
+res = cli_real.order_cash_buy(code="005930", qty=1, price=None)  # 시장가 매수 예시
+print(res.status_code, res.text)

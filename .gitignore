@@ -3,9 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# 비밀키 등등
+# 비밀키 등등. 전략도 배제해야 할까?
 j0_personal_setting/
-j2_strategy/
+j5_personal_trading/
 
 # Virtual environment
 # Secret files

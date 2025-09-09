@@ -211,24 +211,24 @@ class Machine:
                 break
         # --- 2) 현재가를 호가단위에 맞게 반올림
         current = round(math.floor(current / price_unit) * price_unit, 6)  # 부동소수점 오차방지를 위해 round로 감싼다.
-
-
         # current = current / price_unit  # 최소단위로 나누어 소수점 잘라준 이후 다시 최소단위를 곱하여 올바른 요청값을 만든다.
           # 소수점을 잘라줘 거래가 가능한 양으로 맞춘다.
         # current = current * price_unit
         # 부동소수점의 오차 때문에.... 이상한 게 남는다.
 
         # 반복문으로 coin_unit 결정
+        coin_unit = 0  # 최소주문수량을 담기 위한 변수.
         for limit, unit in base_info.coin_table:
             if current < limit:
                 coin_unit = unit
                 break
         # 최소 주문갯수 맞추기.
-        num_coin = float(num_coin)  # 들어온 값을 숫자화
-        num_coin = num_coin * (10** coin_unit)  # 내림을 적용하기 위함.
-        num_coin = math.floor(num_coin)  # 내림 적용.
-        num_coin = num_coin * (10** -coin_unit)  # 되돌리기.
-        num_coin = round(num_coin, coin_unit) # round(num_coin, coin_unit)  # 소수점을 잘라줘 거래가 가능한 양으로 맞춘다.
+        num_coin = round(math.floor(num_coin / coin_unit) * coin_unit, 8)
+        # num_coin = float(num_coin)  # 들어온 값을 숫자화
+        # num_coin = num_coin * (10** coin_unit)  # 내림을 적용하기 위함.
+        # num_coin = math.floor(num_coin)  # 내림 적용.
+        # num_coin = num_coin * (10** -coin_unit)  # 되돌리기.
+        # num_coin = round(num_coin, coin_unit) # round(num_coin, coin_unit)  # 소수점을 잘라줘 거래가 가능한 양으로 맞춘다.
         return current, num_coin
 
     def cancle_order(self, order_id, order_currency, type='bid', payment_currency="KRW"):

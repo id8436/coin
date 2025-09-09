@@ -123,7 +123,7 @@ if __name__ == "__main__":
         'param3': 0.0025,
         'param4': 0.0845,
     }
-    test = Test(params=params, start='2024-08-01 00:00:00', end='2025-07-31 07:00:00')
+    test = Test(params=params, start='2025-08-01 00:00:00', end='2025-08-31 23:59:00')
     test.test_determine_and_sell()  # 가상 사고 팔기 진행.
     # test_machine.get_ticker_list()
 
