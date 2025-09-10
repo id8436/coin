@@ -37,7 +37,7 @@ def lowerThanMean_PlusGradient(data_df, restore_info, **params):
         if recent_grad > 0:
         # if grad < 0 and (current - little_ago) > 0:
             target_price = float((target_price +1) * restore_info)  # 기본적으로 퍼센테이지로 드러냄.
-            how_many = 10000 / target_price  # 숫자를 기본 구매가격으로.(25년 기준 빗썸 최소가 5천원이라)
+            how_many = 6000 / target_price  # 숫자를 기본 구매가격으로.(25년 기준 빗썸 최소가 5천원이라)
             return True, target_price, how_many
     return False, None, None
 
